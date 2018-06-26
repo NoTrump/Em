@@ -1,0 +1,52 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed May 30 16:25:36 2018
+
+@author: Administrator
+"""
+
+import numpy as np
+ys = np.array([(5,5), (9,1), (8,2), (4,6), (7,3)])
+thetas = np.array([[0.6, 0.4], [0.5, 0.5]])  # 初始化两个theta
+pis =np.array([0.5,0.5])  # 随手拿出A还是B硬币的概率都设为0.5
+
+tolerance = 0.01
+max_iter = 100
+
+loglike_old = 0
+for i in range(max_iter):
+    E_c1 = []
+    E_c2 = []
+    EcY_1 = []
+    EcY_2 = []
+    loglike_new = 0
+    # E步骤: 
+    for i in range(len(ys)):
+
+        # multinomial log likelihood （对于这个案例，我们用的是伯努利）
+        log_k1 = np.sum([ys[i]*np.log(thetas[0])])  #  \log [\theta_k^{y_{oi}} (1-\theta_k)^{n - y_{oi}} ]  
+        log_k2 = np.sum([ys[i]*np.log(thetas[1])])  #  \log [\theta_k^{y_{oi}} (1-\theta_k)^{n - y_{oi}} ] 
+
+        # 得到 c_ik 的期望
+        denom = np.exp(log_k1) * pis[0] + np.exp(log_k2) * pis[1]
+        E_ci1 = np.exp(log_k1) * pis[0] / denom
+        E_ci2 = np.exp(log_k2) * pis[1] / denom
+
+        # 更新完整的 log likelihood  
+        # 我们只在这一步检查它是否converge，并不更新theta 
+        loglike_new += E_ci1 * log_k1 + E_ci2 * log_k2
+        E_c1.append(E_ci1)
+        E_c2.append(E_ci2)
+
+    # M步骤：
+    for i in range(len(ys)):
+        EcY_1.append(E_c1[i] * ys[i] )  
+        EcY_2.append(E_c2[i] * ys[i] )
+    thetas[0] = np.sum(EcY_1, 0)/np.sum(EcY_1)
+    thetas[1] = np.sum(EcY_2, 0)/np.sum(EcY_2)
+    print("Iteration: %d" % (i+1))
+    print("theta_A = %.2f, theta_B = %.2f, difference in loglike = %.2f" % (thetas[0,0], thetas[1,0], loglike_new - loglike_old))
+
+    if np.abs(loglike_new - loglike_old) < tolerance:
+        break
+    loglike_old = loglike_new
